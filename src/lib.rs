@@ -9,15 +9,19 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("not enough arguments");
-        }
+    pub fn new(mut args: std::env::Args) -> Result<Config, &'static str> {
+        args.next();
 
         // clone the strings inside the args array to create a 
         // Config instance without worrying about the lifetimes
-        let query = args[1].clone();
-        let filename = args[2].clone();
+        let query = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Didn't get a query string"),
+        };
+        let filename = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Didn't get a file string"),
+        };
         
         let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
 
@@ -49,15 +53,10 @@ pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     // only mandate that the lifetiem of the returned references
     // to be at least as long as that of contents
     // query does not get involved in the return
-    let mut results = Vec::new();
-
-    for line in contents.lines() {
-        if line.contains(query) {
-            results.push(line);
-        }
-    }
-
-    results
+    contents
+        .lines()
+        .filter(|line| line.contains(query))
+        .collect()
 }
 
 pub fn search_case_insensitive<'a>(
@@ -66,16 +65,10 @@ pub fn search_case_insensitive<'a>(
 ) -> Vec<&'a str> {
     let query = query.to_lowercase();
     // query now is a string instead of string slice
-    let mut results = Vec::new();
-
-    for line in contents.lines() {
-        if line.to_lowercase().contains(&query) {
-            // contains takes a string slice
-            results.push(line);
-        }
-    }
-
-    results
+    contents
+        .lines()
+        .filter(|line| line.to_lowercase().contains(&query))
+        .collect()
 }
 
 #[cfg(test)]
